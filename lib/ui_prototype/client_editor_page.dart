@@ -148,6 +148,12 @@ class _ClientEditorPageState extends State<ClientEditorPage>
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
+        final focus = FocusManager.instance.primaryFocus;
+        if (focus?.hasFocus == true) {
+          focus?.unfocus();
+          return;
+        }
+
         if (!_isDirty) {
           if (mounted) {
             Navigator.pop(context, result);

@@ -221,7 +221,7 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
     _peerSubscription?.cancel();
     _profilesSub?.cancel();
     _orgSettingsSub?.cancel();
-    _syncService?.stopPolling();
+    _syncService?.stopPolling(notifyDebug: false);
     _autoSaveDebouncer.dispose();
     _petNameController.dispose();
     _petTypeController.dispose();
