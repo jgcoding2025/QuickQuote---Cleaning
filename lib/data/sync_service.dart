@@ -194,11 +194,13 @@ class SyncService {
     _notifyDebug();
   }
 
-  void stopPolling() {
+  void stopPolling({bool notifyDebug = true}) {
     _downloadPollingEnabled = false;
     _downloadPollingTimer?.cancel();
     _downloadPollingTimer = null;
-    _notifyDebug();
+    if (notifyDebug) {
+      _notifyDebug();
+    }
   }
 
   Future<void> _uploadOnce(String reason) async {
