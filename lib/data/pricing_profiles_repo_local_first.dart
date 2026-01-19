@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'local_db.dart';
@@ -12,6 +13,8 @@ import 'session_controller.dart';
 import 'sync_service.dart';
 
 class PricingProfilesRepositoryLocalFirst {
+  static const int _catalogSeedVersion = 1;
+
   PricingProfilesRepositoryLocalFirst({
     required AppDatabase db,
     required SessionController sessionController,
@@ -602,6 +605,9 @@ class PricingProfilesRepositoryLocalFirst {
   }
 
   Future<void> _ensureDefaultCatalogSeeded(String orgId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final seedKey = 'pricing_catalog_seed_version_$orgId';
+    final storedSeedVersion = prefs.getInt(seedKey);
     final existing =
         await (_db.select(_db.pricingProfileServiceTypes)
               ..where(
@@ -612,8 +618,11 @@ class PricingProfilesRepositoryLocalFirst {
               )
               ..limit(1))
             .getSingleOrNull();
-    if (existing != null) {
+    if (existing != null && storedSeedVersion == _catalogSeedVersion) {
       return;
+    }
+    if (existing != null && storedSeedVersion != _catalogSeedVersion) {
+      await _clearDefaultCatalog(orgId);
     }
     final now = DateTime.now().millisecondsSinceEpoch;
     final seeder = PricingProfileCatalogSeeder(
@@ -628,6 +637,40 @@ class PricingProfilesRepositoryLocalFirst {
       updatedAt: now,
       data: data,
     );
+    await prefs.setInt(seedKey, _catalogSeedVersion);
+  }
+
+  Future<void> _clearDefaultCatalog(String orgId) async {
+    await (_db.delete(_db.pricingProfileServiceTypes)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileFrequencies)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileRoomTypes)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileSubItems)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileSizes)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileComplexities)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
   }
 
   Future<String> _uniqueProfileName(String orgId, String baseName) async {
