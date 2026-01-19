@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'local_db.dart';
@@ -612,21 +613,76 @@ class PricingProfilesRepositoryLocalFirst {
               )
               ..limit(1))
             .getSingleOrNull();
-    if (existing != null) {
-      return;
-    }
     final now = DateTime.now().millisecondsSinceEpoch;
     final seeder = PricingProfileCatalogSeeder(
       db: _db,
       uuid: _uuid,
       insertOutbox: _insertOutbox,
     );
+    final seedSignature = await seeder.loadSeedSignature();
+    final storedSeedSignature = await _readSeedSignature(orgId);
+    if (existing != null && storedSeedSignature == seedSignature) {
+      return;
+    }
+    if (existing != null && storedSeedSignature != seedSignature) {
+      await _clearDefaultCatalog(orgId);
+    }
     final data = await seeder.loadSeedData();
     await seeder.insertCatalogRows(
       orgId: orgId,
       profileId: 'default',
       updatedAt: now,
       data: data,
+    );
+    await _writeSeedSignature(orgId, seedSignature);
+  }
+
+  Future<void> _clearDefaultCatalog(String orgId) async {
+    await (_db.delete(_db.pricingProfileServiceTypes)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileFrequencies)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileRoomTypes)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileSubItems)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileSizes)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+    await (_db.delete(_db.pricingProfileComplexities)
+          ..where(
+            (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
+          ))
+        .go();
+  }
+
+  Future<String?> _readSeedSignature(String orgId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('pricing_catalog_seed_signature_$orgId');
+  }
+
+  Future<void> _writeSeedSignature(
+    String orgId,
+    String seedSignature,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'pricing_catalog_seed_signature_$orgId',
+      seedSignature,
     );
   }
 

@@ -58,6 +58,33 @@ class PricingProfileCatalogSeeder {
     );
   }
 
+  Future<String> loadSeedSignature() async {
+    final assets = [
+      'assets/settings/service_type_standards.json',
+      'assets/settings/frequency_standards.json',
+      'assets/settings/room_type_standards.json',
+      'assets/settings/sub_item_standards.json',
+      'assets/settings/size_standards.json',
+      'assets/settings/complexity_standards.json',
+    ];
+    var hash = _fnv1a32('');
+    for (final asset in assets) {
+      final content = await rootBundle.loadString(asset);
+      hash = _fnv1a32('$hash|$content');
+    }
+    return hash.toRadixString(16);
+  }
+
+  int _fnv1a32(String input) {
+    const int fnvPrime = 0x01000193;
+    var hash = 0x811c9dc5;
+    for (final byte in utf8.encode(input)) {
+      hash ^= byte;
+      hash = (hash * fnvPrime) & 0xffffffff;
+    }
+    return hash;
+  }
+
   Future<void> insertCatalogRows({
     required String orgId,
     required String profileId,
