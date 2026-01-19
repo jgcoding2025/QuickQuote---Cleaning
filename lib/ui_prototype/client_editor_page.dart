@@ -21,9 +21,9 @@ class _ClientEditorPageState extends State<ClientEditorPage>
   bool _isDirty = false;
   @override
   bool _applyingRemote = false;
-  bool _hasRemoteUpdate = false;
   Client? _pendingRemoteClient;
   StreamSubscription<Client?>? _remoteSubscription;
+  late final VoidCallback _focusListener;
   @override
   late ClientDraft _baseline;
   @override
@@ -55,6 +55,8 @@ class _ClientEditorPageState extends State<ClientEditorPage>
     super.initState();
     _load(widget.existing);
     _startRemoteWatch();
+    _focusListener = _handleFocusChange;
+    FocusManager.instance.addListener(_focusListener);
 
     // Mark dirty when any field changes
     for (final c in [
@@ -90,6 +92,7 @@ class _ClientEditorPageState extends State<ClientEditorPage>
     ]) {
       c.removeListener(_handleChanged);
     }
+    FocusManager.instance.removeListener(_focusListener);
     _autoSaveDebouncer.dispose();
     firstName.dispose();
     lastName.dispose();
@@ -109,13 +112,16 @@ class _ClientEditorPageState extends State<ClientEditorPage>
     _remoteSubscription =
         widget.repo.watchClientById(clientId!).listen((client) {
       if (!mounted || client == null) return;
-      if (!_isDirty) {
+      final incomingSnapshot = jsonEncode(client.toDraft().toMap());
+      final localSnapshot = jsonEncode(_draft().toMap());
+      if (incomingSnapshot == localSnapshot) {
+        _pendingRemoteClient = null;
+        return;
+      }
+      if (!_isDirty && !_hasActiveFocus()) {
         _applyRemoteClient(client);
       } else {
-        setState(() {
-          _pendingRemoteClient = client;
-          _hasRemoteUpdate = true;
-        });
+        _pendingRemoteClient = client;
       }
     });
   }
@@ -123,17 +129,25 @@ class _ClientEditorPageState extends State<ClientEditorPage>
   void _applyRemoteClient(Client client) {
     _load(client, notify: false, applyingRemote: true);
     setState(() {
-      _hasRemoteUpdate = false;
       _pendingRemoteClient = null;
     });
   }
 
-  void _refreshFromRemote() {
-    final client = _pendingRemoteClient;
-    if (client == null) {
+  bool _hasActiveFocus() =>
+      FocusManager.instance.primaryFocus?.hasFocus ?? false;
+
+  void _handleFocusChange() {
+    if (!mounted) {
       return;
     }
-    _applyRemoteClient(client);
+    if (_hasActiveFocus()) {
+      return;
+    }
+    final pending = _pendingRemoteClient;
+    if (pending == null || _isDirty) {
+      return;
+    }
+    _applyRemoteClient(pending);
   }
 
   @override
@@ -195,21 +209,6 @@ class _ClientEditorPageState extends State<ClientEditorPage>
             padding: const EdgeInsets.all(16),
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
-              if (_hasRemoteUpdate)
-                Card(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
-                  child: ListTile(
-                    leading: const Icon(Icons.sync),
-                    title: const Text('Updated on another device'),
-                    subtitle:
-                        const Text('Refresh to load the latest changes.'),
-                    trailing: TextButton(
-                      onPressed: _refreshFromRemote,
-                      child: const Text('Refresh'),
-                    ),
-                  ),
-                ),
-              if (_hasRemoteUpdate) const SizedBox(height: 12),
               ..._buildClientDetailsForm(),
               const SizedBox(height: 16),
               _buildSaveActions(),

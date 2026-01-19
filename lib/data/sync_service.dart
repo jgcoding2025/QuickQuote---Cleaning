@@ -59,7 +59,7 @@ class SyncService {
   Timer? _uploadDebounceTimer;
   Timer? _uploadSafetyTimer;
   bool _isOnlineState = false;
-  bool _downloadPollingEnabled = false;
+  bool _downloadPollingEnabled = true;
   SyncStatus _current = SyncStatus.offline;
   Future<void>? _uploadInFlight;
   Future<void>? _downloadInFlight;
@@ -215,8 +215,10 @@ class SyncService {
     _notifyDebug();
     _setStatus(SyncStatus.syncing);
     try {
-      await _uploadOutbox(session.orgId!);
-      _lastUploadAtLocal = DateTime.now();
+      final uploadedCount = await _uploadOutbox(session.orgId!);
+      if (uploadedCount > 0) {
+        _lastUploadAtLocal = DateTime.now();
+      }
       _setStatus(SyncStatus.online);
       _notifyDebug();
       if (_presenceService.hasPeerOnline) {
@@ -250,7 +252,7 @@ class SyncService {
     }
   }
 
-  Future<void> _uploadOutbox(String orgId) async {
+  Future<int> _uploadOutbox(String orgId) async {
     final pending =
         await (_db.select(_db.outbox)
               ..where(
@@ -287,6 +289,7 @@ class SyncService {
       });
       debugPrint('OUTBOX: transaction end for item ${item.id}.');
     }
+    return pending.length;
   }
 
   bool _isOnline(dynamic value) {
