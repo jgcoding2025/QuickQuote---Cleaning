@@ -618,18 +618,20 @@ class PricingProfilesRepositoryLocalFirst {
               )
               ..limit(1))
             .getSingleOrNull();
-    if (existing != null && storedSeedVersion == _catalogSeedVersion) {
-      return;
-    }
-    if (existing != null && storedSeedVersion != _catalogSeedVersion) {
-      await _clearDefaultCatalog(orgId);
-    }
     final now = DateTime.now().millisecondsSinceEpoch;
     final seeder = PricingProfileCatalogSeeder(
       db: _db,
       uuid: _uuid,
       insertOutbox: _insertOutbox,
     );
+    final seedSignature = await seeder.loadSeedSignature();
+    final storedSeedSignature = await _readSeedSignature(orgId);
+    if (existing != null && storedSeedSignature == seedSignature) {
+      return;
+    }
+    if (existing != null && storedSeedSignature != seedSignature) {
+      await _clearDefaultCatalog(orgId);
+    }
     final data = await seeder.loadSeedData();
     await seeder.insertCatalogRows(
       orgId: orgId,
@@ -637,7 +639,7 @@ class PricingProfilesRepositoryLocalFirst {
       updatedAt: now,
       data: data,
     );
-    await prefs.setInt(seedKey, _catalogSeedVersion);
+    await _writeSeedSignature(orgId, seedSignature);
   }
 
   Future<void> _clearDefaultCatalog(String orgId) async {
@@ -671,6 +673,22 @@ class PricingProfilesRepositoryLocalFirst {
             (tbl) => tbl.orgId.equals(orgId) & tbl.profileId.equals('default'),
           ))
         .go();
+  }
+
+  Future<String?> _readSeedSignature(String orgId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('pricing_catalog_seed_signature_$orgId');
+  }
+
+  Future<void> _writeSeedSignature(
+    String orgId,
+    String seedSignature,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'pricing_catalog_seed_signature_$orgId',
+      seedSignature,
+    );
   }
 
   Future<String> _uniqueProfileName(String orgId, String baseName) async {
