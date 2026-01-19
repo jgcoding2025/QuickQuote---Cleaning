@@ -24,6 +24,7 @@ import 'data/quotes_repo_local_first.dart';
 import 'data/session_controller.dart';
 import 'data/sync_banner_status.dart';
 import 'data/sync_service.dart';
+import 'pdf/pdf_service.dart';
 import 'util/debouncer.dart';
 import 'util/app_version.dart';
 import 'util/local_file_ops.dart';

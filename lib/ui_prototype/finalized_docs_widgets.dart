@@ -177,15 +177,45 @@ class FinalizedDocumentViewerPage extends StatefulWidget {
 class _FinalizedDocumentViewerPageState
     extends State<FinalizedDocumentViewerPage> {
   late Future<Uint8List> _bytesFuture;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.document.localPath.isEmpty) {
-      _bytesFuture = Future.error('No local file available.');
-    } else {
-      _bytesFuture = readBytes(widget.document.localPath);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
     }
+    final deps = AppDependencies.of(context);
+    _bytesFuture = _loadPdfBytes(deps.pdfService);
+    _initialized = true;
+  }
+
+  Future<Uint8List> _loadPdfBytes(PdfService pdfService) async {
+    if (widget.document.localPath.isNotEmpty) {
+      try {
+        return await readBytes(widget.document.localPath);
+      } catch (_) {}
+    }
+    if (kIsWeb) {
+      final docType = FinalizedDocumentTypeX.fromString(
+            widget.document.docType,
+          ) ??
+          FinalizedDocumentType.quote;
+      final documentNumber =
+          widget.document.totalsSnapshot['documentNumber']?.toString();
+      return pdfService.buildPdfFromSnapshots(
+        docType: docType,
+        quoteSnapshot: widget.document.quoteSnapshot,
+        pricingSnapshot: widget.document.pricingSnapshot,
+        totalsSnapshot: widget.document.totalsSnapshot,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          widget.document.createdAt,
+        ),
+        documentNumber: documentNumber,
+        docId: widget.document.id,
+      );
+    }
+    throw StateError('No local file available.');
   }
 
   @override
@@ -199,14 +229,13 @@ class _FinalizedDocumentViewerPageState
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError || !snapshot.hasData) {
-            // On web we don't currently have a local file system path to read.
             if (kIsWeb) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'PDF viewing is not available on the web version yet.\n'
-                    'Please open this document from the mobile app.',
+                    'Unable to load the PDF in the web version.\n'
+                    'Please refresh or regenerate the document.',
                     textAlign: TextAlign.center,
                   ),
                 ),

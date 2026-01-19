@@ -48,6 +48,9 @@ class PdfService {
       pricingSnapshot: pricingSnapshot,
       occupantsRules: occupantsRules,
     );
+    final createdAt = DateTime.now();
+    final documentNumber =
+        _documentNumber(docType: docType, createdAt: createdAt);
     final totalsSnapshot = _finalizedDocsRepository.buildTotalsSnapshot(
       minutes: totals.minutes,
       hours: totals.hours,
@@ -56,9 +59,7 @@ class PdfService {
       ccFee: totals.ccFee,
       total: totals.total,
     );
-    final createdAt = DateTime.now();
-    final documentNumber =
-        _documentNumber(docType: docType, createdAt: createdAt);
+    totalsSnapshot['documentNumber'] = documentNumber;
     final docId = _uuid.v4();
     final pdfBytes = await _buildPdf(
       docType: docType,
@@ -114,6 +115,33 @@ class PdfService {
       'sizes': catalog.sizes.map(_mapSize).toList(),
       'complexities': catalog.complexities.map(_mapComplexity).toList(),
     };
+  }
+
+  Future<Uint8List> buildPdfFromSnapshots({
+    required FinalizedDocumentType docType,
+    required Map<String, dynamic> quoteSnapshot,
+    required Map<String, dynamic> pricingSnapshot,
+    required Map<String, dynamic> totalsSnapshot,
+    required DateTime createdAt,
+    String? documentNumber,
+    String? docId,
+  }) async {
+    final occupantsRules = await OccupantsRulesLoader.load();
+    final resolvedNumber = _resolveDocumentNumber(
+      docType: docType,
+      createdAt: createdAt,
+      documentNumber: documentNumber,
+      docId: docId,
+    );
+    return _buildPdf(
+      docType: docType,
+      quoteSnapshot: quoteSnapshot,
+      pricingSnapshot: pricingSnapshot,
+      totalsSnapshot: totalsSnapshot,
+      createdAt: createdAt,
+      documentNumber: resolvedNumber,
+      occupantsRules: occupantsRules,
+    );
   }
 
   TotalsSnapshot calculateTotals({
@@ -320,6 +348,29 @@ class PdfService {
     final suffix = _uuid.v4().split('-').first.toUpperCase();
     final prefix = docType == FinalizedDocumentType.invoice ? 'INV' : 'QTE';
     return '$prefix-$yyyy$mm$dd-$suffix';
+  }
+
+  String _resolveDocumentNumber({
+    required FinalizedDocumentType docType,
+    required DateTime createdAt,
+    String? documentNumber,
+    String? docId,
+  }) {
+    final trimmed = documentNumber?.trim() ?? '';
+    if (trimmed.isNotEmpty) {
+      return trimmed;
+    }
+    if (docId != null && docId.trim().isNotEmpty) {
+      final yyyy = createdAt.year.toString();
+      final mm = createdAt.month.toString().padLeft(2, '0');
+      final dd = createdAt.day.toString().padLeft(2, '0');
+      final suffix = docId.replaceAll('-', '').toUpperCase();
+      final shortSuffix =
+          suffix.length > 6 ? suffix.substring(0, 6) : suffix;
+      final prefix = docType == FinalizedDocumentType.invoice ? 'INV' : 'QTE';
+      return '$prefix-$yyyy$mm$dd-$shortSuffix';
+    }
+    return _documentNumber(docType: docType, createdAt: createdAt);
   }
 
   Future<Uint8List> _buildPdf({
