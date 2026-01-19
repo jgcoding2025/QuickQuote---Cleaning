@@ -25,6 +25,7 @@ import 'data/session_controller.dart';
 import 'data/sync_banner_status.dart';
 import 'data/sync_service.dart';
 import 'util/debouncer.dart';
+import 'util/app_version.dart';
 import 'util/local_file_ops.dart';
 
 part 'ui_prototype/app.dart';
