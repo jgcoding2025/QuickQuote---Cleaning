@@ -27,9 +27,10 @@ class QuotesRepositoryLocalFirst {
 
   String newQuoteId() => _uuid.v4();
 
-  Stream<List<Quote>> streamQuotes() async* {
-    final controller = StreamController<List<Quote>>();
+  Stream<List<Quote>> streamQuotes() {
+    final controller = StreamController<List<Quote>>.broadcast();
     StreamSubscription<List<Quote>>? dataSub;
+    StreamSubscription<AppSession?>? sessionSub;
 
     Future<void> listenSession(AppSession? session) async {
       await dataSub?.cancel();
@@ -46,19 +47,30 @@ class QuotesRepositoryLocalFirst {
           );
     }
 
-    await listenSession(_sessionController.value);
-    final sessionSub = _sessionController.stream.listen(listenSession);
-    controller.onCancel = () async {
-      await dataSub?.cancel();
-      await sessionSub.cancel();
-    };
+    Future<void> start() async {
+      if (sessionSub != null) return;
+      await listenSession(_sessionController.value);
+      sessionSub = _sessionController.stream.listen(listenSession);
+    }
 
-    yield* controller.stream;
+    Future<void> stop() async {
+      await dataSub?.cancel();
+      dataSub = null;
+      await sessionSub?.cancel();
+      sessionSub = null;
+    }
+
+    controller
+      ..onListen = start
+      ..onCancel = stop;
+
+    return controller.stream;
   }
 
-  Stream<List<Quote>> streamQuotesForClient(String clientId) async* {
-    final controller = StreamController<List<Quote>>();
+  Stream<List<Quote>> streamQuotesForClient(String clientId) {
+    final controller = StreamController<List<Quote>>.broadcast();
     StreamSubscription<List<Quote>>? dataSub;
+    StreamSubscription<AppSession?>? sessionSub;
 
     Future<void> listenSession(AppSession? session) async {
       await dataSub?.cancel();
@@ -75,19 +87,30 @@ class QuotesRepositoryLocalFirst {
           );
     }
 
-    await listenSession(_sessionController.value);
-    final sessionSub = _sessionController.stream.listen(listenSession);
-    controller.onCancel = () async {
-      await dataSub?.cancel();
-      await sessionSub.cancel();
-    };
+    Future<void> start() async {
+      if (sessionSub != null) return;
+      await listenSession(_sessionController.value);
+      sessionSub = _sessionController.stream.listen(listenSession);
+    }
 
-    yield* controller.stream;
+    Future<void> stop() async {
+      await dataSub?.cancel();
+      dataSub = null;
+      await sessionSub?.cancel();
+      sessionSub = null;
+    }
+
+    controller
+      ..onListen = start
+      ..onCancel = stop;
+
+    return controller.stream;
   }
 
-  Stream<Quote?> watchQuoteById(String quoteId) async* {
-    final controller = StreamController<Quote?>();
+  Stream<Quote?> watchQuoteById(String quoteId) {
+    final controller = StreamController<Quote?>.broadcast();
     StreamSubscription<Quote?>? dataSub;
+    StreamSubscription<AppSession?>? sessionSub;
 
     Future<void> listenSession(AppSession? session) async {
       await dataSub?.cancel();
@@ -104,14 +127,24 @@ class QuotesRepositoryLocalFirst {
           );
     }
 
-    await listenSession(_sessionController.value);
-    final sessionSub = _sessionController.stream.listen(listenSession);
-    controller.onCancel = () async {
-      await dataSub?.cancel();
-      await sessionSub.cancel();
-    };
+    Future<void> start() async {
+      if (sessionSub != null) return;
+      await listenSession(_sessionController.value);
+      sessionSub = _sessionController.stream.listen(listenSession);
+    }
 
-    yield* controller.stream;
+    Future<void> stop() async {
+      await dataSub?.cancel();
+      dataSub = null;
+      await sessionSub?.cancel();
+      sessionSub = null;
+    }
+
+    controller
+      ..onListen = start
+      ..onCancel = stop;
+
+    return controller.stream;
   }
 
   Future<void> setQuote(
