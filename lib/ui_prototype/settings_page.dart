@@ -16,6 +16,7 @@ class _SettingsPageState extends State<SettingsPage>
   late PricingProfilesRepositoryLocalFirst _pricingProfilesRepo;
   late PricingProfileCatalogRepositoryLocalFirst _pricingCatalogRepo;
   late final Future<SettingsData> _settingsDataFuture;
+  late final Future<AppVersionInfo> _versionInfoFuture;
   bool _inviteLoading = false;
   String? _inviteCode;
   String? _inviteError;
@@ -32,6 +33,7 @@ class _SettingsPageState extends State<SettingsPage>
   void initState() {
     super.initState();
     _settingsDataFuture = _loadSettingsData();
+    _versionInfoFuture = AppVersionInfo.load();
   }
 
   @override
@@ -96,6 +98,12 @@ class _SettingsPageState extends State<SettingsPage>
                       context,
                       title: 'Read/Writes to Database',
                       child: _readWriteMetricsCard(context),
+                    ),
+                    const SizedBox(height: 24),
+                    _settingsSection(
+                      context,
+                      title: 'About',
+                      child: _aboutCard(context),
                     ),
                   ],
                 );
@@ -215,6 +223,37 @@ class _SettingsPageState extends State<SettingsPage>
         const SizedBox(height: 12),
         _metricsRangeSelector(context),
       ],
+    );
+  }
+
+  Widget _aboutCard(BuildContext context) {
+    return FutureBuilder<AppVersionInfo>(
+      future: _versionInfoFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Text('Unable to load version info.');
+        }
+        final info = snapshot.data;
+        if (info == null) {
+          return const Text('Version information unavailable.');
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(info.displayWithHash),
+            const SizedBox(height: 8),
+            Text(
+              'Update the version (MAJOR.MINOR.PATCH) for breaking changes, '
+              'features, or fixes, and bump the build number for each '
+              'beta/release build so testers can identify it.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        );
+      },
     );
   }
 
