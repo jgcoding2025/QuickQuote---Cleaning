@@ -61,8 +61,6 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
   @override
   bool _applyingRemote = false;
   @override
-  bool _hasRemoteUpdate = false;
-  @override
   bool _liveMode = false;
   @override
   bool _hasPeerOnline = false;
@@ -174,6 +172,7 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
   bool _pricingProfileDeleted = false;
   String? _missingPricingProfileName;
   SyncService? _syncService;
+  late final VoidCallback _focusListener;
 
   @override
   List<PricingProfileHeader> get pricingProfiles => _pricingProfiles;
@@ -211,6 +210,8 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
   void initState() {
     super.initState();
     _syncFromQuote(widget.quote);
+    _focusListener = _handleFocusChange;
+    FocusManager.instance.addListener(_focusListener);
     // _settingsFuture = _loadQuoteSettingsData();
     _startRemoteWatch();
   }
@@ -221,7 +222,7 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
     _peerSubscription?.cancel();
     _profilesSub?.cancel();
     _orgSettingsSub?.cancel();
-    _syncService?.stopPolling(notifyDebug: false);
+    FocusManager.instance.removeListener(_focusListener);
     _autoSaveDebouncer.dispose();
     _petNameController.dispose();
     _petTypeController.dispose();
@@ -289,8 +290,6 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
               Future.value(),
         );
       }
-    } else {
-      _syncService?.stopPolling();
     }
   }
 
@@ -299,14 +298,17 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
       quote,
     ) {
       if (!mounted || quote == null) return;
-      if (!_isDirty) {
-        _applyRemoteQuote(quote);
-      } else {
-        setState(() {
-          _pendingRemoteQuote = quote;
-          _hasRemoteUpdate = true;
-        });
+      final incomingSnapshot = _quoteSnapshot(quote);
+      final localSnapshot = _draftSnapshot();
+      if (incomingSnapshot == localSnapshot) {
+        _pendingRemoteQuote = null;
+        return;
       }
+      if (!_isDirty && !_hasActiveFocus()) {
+        _applyRemoteQuote(quote);
+        return;
+      }
+      _pendingRemoteQuote = quote;
     });
   }
 
@@ -374,10 +376,26 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
     setState(() {
       _syncFromQuote(quote);
       _isDirty = false;
-      _hasRemoteUpdate = false;
       _pendingRemoteQuote = null;
       _remoteRevision += 1;
     });
+  }
+
+  bool _hasActiveFocus() =>
+      FocusManager.instance.primaryFocus?.hasFocus ?? false;
+
+  void _handleFocusChange() {
+    if (!mounted) {
+      return;
+    }
+    if (_hasActiveFocus()) {
+      return;
+    }
+    final pending = _pendingRemoteQuote;
+    if (pending == null || _isDirty) {
+      return;
+    }
+    _applyRemoteQuote(pending);
   }
 
   void _setPricingProfileStatus({
@@ -441,14 +459,6 @@ class _QuoteEditorPageState extends State<QuoteEditorPage>
   }
 
   @override
-  void _refreshFromRemote() {
-    final quote = _pendingRemoteQuote;
-    if (quote == null) {
-      return;
-    }
-    _applyRemoteQuote(quote);
-  }
-
   @override
   Future<void> _generateFinalizedDocument(FinalizedDocumentType docType) async {
     if (_isGeneratingDocument) {
