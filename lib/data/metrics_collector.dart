@@ -34,7 +34,7 @@ class MetricsCollectors {
     SharedPreferences? preferences,
     bool? enable,
   }) {
-    final shouldEnable = enable ?? kDebugMode;
+    final shouldEnable = enable ?? (kDebugMode || kIsWeb);
     if (!shouldEnable) {
       return const NoopMetricsCollector();
     }

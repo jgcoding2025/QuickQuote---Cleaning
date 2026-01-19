@@ -1,4 +1,9 @@
+import 'dart:convert';
 import 'dart:typed_data';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+const String _pdfStoragePrefix = 'webpdf_v1:';
 
 Future<String> savePdfToLocalFile({
   required String orgId,
@@ -6,7 +11,8 @@ Future<String> savePdfToLocalFile({
   required String docId,
   required Uint8List bytes,
 }) async {
-  // No local file system access on web. Returning an empty string keeps the
-  // data model intact while allowing the web build to compile and run.
-  return '';
+  final key = '$_pdfStoragePrefix$orgId:$quoteId:$docId';
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(key, base64Encode(bytes));
+  return key;
 }
