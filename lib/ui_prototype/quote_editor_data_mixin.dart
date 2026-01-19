@@ -27,9 +27,6 @@ mixin _QuoteEditorStateAccess on State<QuoteEditorPage> {
   bool get _applyingRemote;
   set _applyingRemote(bool value);
 
-  bool get _hasRemoteUpdate;
-  set _hasRemoteUpdate(bool value);
-
   bool get _liveMode;
   set _liveMode(bool value);
 
@@ -159,7 +156,6 @@ mixin _QuoteEditorStateAccess on State<QuoteEditorPage> {
   Future<bool> _confirmDiscardChanges();
   Future<void> _saveQuote();
   Future<void> _selectPricingProfile(String profileId);
-  void _refreshFromRemote();
   void _markDirty([VoidCallback? update]);
   Future<void> _autoSaveQuote(int generation, SyncService syncService);
   Future<void> _generateFinalizedDocument(FinalizedDocumentType docType);
@@ -679,6 +675,47 @@ mixin _QuoteEditorDataMixin on _QuoteEditorStateAccess {
       householdMembers: householdMembers,
     );
   }
+
+  String _draftSnapshot() => jsonEncode(_buildDraft().toMap());
+
+  String _quoteSnapshot(Quote quote) =>
+      jsonEncode(_quoteToDraft(quote).toMap());
+
+  QuoteDraft _quoteToDraft(Quote quote) => QuoteDraft(
+        clientId: quote.clientId,
+        clientName: quote.clientName,
+        quoteName: quote.quoteName,
+        quoteDate: quote.quoteDate,
+        serviceType: quote.serviceType,
+        frequency: quote.frequency,
+        lastProClean: quote.lastProClean,
+        status: quote.status,
+        total: quote.total,
+        address: quote.address,
+        totalSqFt: quote.totalSqFt,
+        useTotalSqFt: quote.useTotalSqFt,
+        estimatedSqFt: quote.estimatedSqFt,
+        petsPresent: quote.petsPresent,
+        homeOccupied: quote.homeOccupied,
+        entryCode: quote.entryCode,
+        paymentMethod: quote.paymentMethod,
+        feedbackDiscussed: quote.feedbackDiscussed,
+        laborRate: quote.laborRate,
+        taxEnabled: quote.taxEnabled,
+        ccEnabled: quote.ccEnabled,
+        taxRate: quote.taxRate,
+        ccRate: quote.ccRate,
+        pricingProfileId: quote.pricingProfileId,
+        defaultRoomType: quote.defaultRoomType,
+        defaultLevel: quote.defaultLevel,
+        defaultSize: quote.defaultSize,
+        defaultComplexity: quote.defaultComplexity,
+        subItemType: quote.subItemType,
+        specialNotes: quote.specialNotes,
+        items: quote.items,
+        pets: quote.pets,
+        householdMembers: quote.householdMembers,
+      );
 
   @override
   Future<void> _autoSaveQuote(int generation, SyncService syncService) async {
