@@ -13,6 +13,8 @@ import 'session_controller.dart';
 import 'sync_service.dart';
 
 class PricingProfilesRepositoryLocalFirst {
+  static const int _catalogSeedVersion = 1;
+
   PricingProfilesRepositoryLocalFirst({
     required AppDatabase db,
     required SessionController sessionController,
@@ -603,6 +605,9 @@ class PricingProfilesRepositoryLocalFirst {
   }
 
   Future<void> _ensureDefaultCatalogSeeded(String orgId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final seedKey = 'pricing_catalog_seed_version_$orgId';
+    final storedSeedVersion = prefs.getInt(seedKey);
     final existing =
         await (_db.select(_db.pricingProfileServiceTypes)
               ..where(
