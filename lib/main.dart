@@ -24,6 +24,8 @@ import 'ui_prototype.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20; // 100 MB
+
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details); // prints the error nicely
   };
