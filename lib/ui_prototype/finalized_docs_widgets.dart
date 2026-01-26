@@ -196,26 +196,23 @@ class _FinalizedDocumentViewerPageState
         return await readBytes(widget.document.localPath);
       } catch (_) {}
     }
-    if (kIsWeb) {
-      final docType = FinalizedDocumentTypeX.fromString(
-            widget.document.docType,
-          ) ??
-          FinalizedDocumentType.quote;
-      final documentNumber =
-          widget.document.totalsSnapshot['documentNumber']?.toString();
-      return pdfService.buildPdfFromSnapshots(
-        docType: docType,
-        quoteSnapshot: widget.document.quoteSnapshot,
-        pricingSnapshot: widget.document.pricingSnapshot,
-        totalsSnapshot: widget.document.totalsSnapshot,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          widget.document.createdAt,
-        ),
-        documentNumber: documentNumber,
-        docId: widget.document.id,
-      );
-    }
-    throw StateError('No local file available.');
+    final docType = FinalizedDocumentTypeX.fromString(
+          widget.document.docType,
+        ) ??
+        FinalizedDocumentType.quote;
+    final documentNumber =
+        widget.document.totalsSnapshot['documentNumber']?.toString();
+    return pdfService.buildPdfFromSnapshots(
+      docType: docType,
+      quoteSnapshot: widget.document.quoteSnapshot,
+      pricingSnapshot: widget.document.pricingSnapshot,
+      totalsSnapshot: widget.document.totalsSnapshot,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        widget.document.createdAt,
+      ),
+      documentNumber: documentNumber,
+      docId: widget.document.id,
+    );
   }
 
   @override
