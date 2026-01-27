@@ -77,14 +77,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-flutter_icons:
-  android: true
-  ios: true
-  image_path: assets/app_icon.png
-  web:
-    generate: true
-    image_path: assets/app_icon.png
-
   # To add assets to your application, add an assets section, like this:
   # assets:
   assets:
@@ -101,6 +93,14 @@ flutter_icons:
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/app_icon_1024.png
+  web:
+    generate: true
+    image_path: assets/icon/app_icon_1024.png
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
